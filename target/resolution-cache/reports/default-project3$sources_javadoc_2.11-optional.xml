@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="ivy-report.xsl"?>
+<ivy-report version="1.0">
+	<info
+		organisation="default"
+		module="project3$sources_javadoc_2.11"
+		revision="1.0"
+		conf="optional"
+		confs="compile, runtime, test, provided, optional, compile-internal, runtime-internal, test-internal, plugin, sources, docs, pom, scala-tool"
+		date="20151022132546"/>
+	<dependencies>
+		<module organisation="org.mindrot" name="jbcrypt">
+			<revision name="0.3m" status="release" pubdate="20100516224639" resolver="sbt-chain" artresolver="sbt-chain" homepage="http://www.mindrot.org/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, default(compile), master" position="0">
+				<license name="ISC/BSD License"/>
+				<metadata-artifact status="no" details="" size="2828" time="0" location="/Users/pranav/.ivy2/cache/org.mindrot/jbcrypt/ivy-0.3m.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/mindrot/jbcrypt/0.3m/jbcrypt-0.3m.pom"/>
+				<caller organisation="default" name="project3$sources_javadoc_2.11" conf="optional" rev="0.3m" rev-constraint-default="0.3m" rev-constraint-dynamic="0.3m" callerrev="1.0"/>
+				<artifacts>
+					<artifact name="jbcrypt" type="src" ext="jar" extra-classifier="sources" status="successful" details="" size="12286" time="700" location="/Users/pranav/.ivy2/cache/org.mindrot/jbcrypt/srcs/jbcrypt-0.3m-sources.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/mindrot/jbcrypt/0.3m/jbcrypt-0.3m-sources.jar"/>
+					</artifact>
+					<artifact name="jbcrypt" type="jar" ext="jar" status="no" details="" size="17750" time="0" location="/Users/pranav/.ivy2/cache/org.mindrot/jbcrypt/jars/jbcrypt-0.3m.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/mindrot/jbcrypt/0.3m/jbcrypt-0.3m.jar"/>
+					</artifact>
+					<artifact name="jbcrypt" type="doc" ext="jar" extra-classifier="javadoc" status="successful" details="" size="22643" time="1113" location="/Users/pranav/.ivy2/cache/org.mindrot/jbcrypt/docs/jbcrypt-0.3m-javadoc.jar">
+						<origin-location is-local="false" location="https://repo1.maven.org/maven2/org/mindrot/jbcrypt/0.3m/jbcrypt-0.3m-javadoc.jar"/>
+					</artifact>
+				</artifacts>
+			</revision>
+		</module>
+	</dependencies>
+</ivy-report>
