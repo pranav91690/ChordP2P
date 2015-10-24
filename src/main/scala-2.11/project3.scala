@@ -13,7 +13,7 @@ object project3 {
   case object findKey
   case object printStatus
   case class getClosestFinger(Sender: ActorRef, key:Int, id:Int, mode:Int, hops:Int)
-  case class closestFinger(Sender: ActorRef, key:Int, id:Int, mode:Int, hops:Int)
+  case class find_Successor(Sender: ActorRef, key:Int, id:Int, mode:Int, hops:Int)
 //  case class returnSuccessor(key:Int, mode:Int, hops:Int)
   case class returnSuccessor(id:Int, node:finger, mode:Int, hops:Int)
 //  case class Key(node : nodeReference)
@@ -43,10 +43,15 @@ object project3 {
   var numNodes = 0
 
   // Mac Value
-  val max = Math.pow(2,31).toInt - 1
+  var max = 0
 
+  // HashSet
+  var set = new mutable.HashSet[Int]()
 
-  class Node(identifier : Int, m : Int, listener: ActorRef) extends Actor{
+  // M Value
+  var m = 0
+
+  class Node(identifier : Int, listener: ActorRef) extends Actor{
     // Instance Variables
     // Predecessor - Initially it's null
     var predecessor : finger  = new finger
@@ -64,43 +69,58 @@ object project3 {
     var stabilizeC  : Cancellable = null
     var fixFingersC : Cancellable = null
     var requests    : Cancellable = null
-    // COunters for Stabilizers
-    var sCounter = numNodes * 10
-    var fCounter = numNodes * m * 10
+
+    // Counters for Stabilizers
+    var sCounter = 5000
+    var fCounter = m * 50
+    var printC  = 5
+
+    // Self Finger
+    var selfF = new finger
+    selfF.id = identifier
+    selfF.node = self
+
 
 
     // Define Receive Method
     def receive = {
       // Core Functionality Messages
       case `findKey`            =>
+        // Make keys zero for next Round
+//        if(stabilizeC.isCancelled && fixFingersC.isCancelled){
+//          // Clear the Hash Map
+//          key = 0
+//          keys.clear()
+//        }
         // RandomLy Generate the ID
-        val random = new Random()
-        val input = random.nextString(20)
-        val id = returnKey(input)
-        val hopCount = 1
 
-        // Send this message only if the the Successor is set
-        key += 1
-        keys.put(key, sender())
+          val random = new Random()
+          val length  = random.nextInt(100)
+          val input   = random.nextString(length)
+          val id = returnKey(input)
+          val hopCount = 0
 
-        // Send a Message to Itself to find the id in it's key
-        self ! getClosestFinger(self, key, id, 0, hopCount)
+
+          // Send this message only if the the Successor is set
+          //        key += 1
+          //        keys.put(key, sender())
+
+          // Send a Message to Itself to find the id in it's key
+          self ! find_Successor(self, 0, id, 0, hopCount)
 
 
       case getClosestFinger(req, k, id, mode, hopCount)   =>
         // Go Through the Fingers and return the Closest one
         var loop = false
-        var found = false
         var i = m-1
         while(!loop){
           if(fingers(i) != null) {
             // Check if the Node is set or not
             if (fingers(i).node != null) {
-              if (existsInRange(identifier, id, fingers(0).id)) {
+              if (existsInRange(identifier, id, fingers(i).id)) {
                 // Closest Finger Found
-                fingers(i).node ! closestFinger(req, k, id, mode, hopCount)
+                fingers(i).node ! find_Successor(req, k, id, mode, hopCount)
                 loop = true
-                found = true
               }
             }
           }
@@ -110,57 +130,61 @@ object project3 {
           }
         }
 
-        if(!found) {
-          // If nothing found, return the Node itself
-          self ! closestFinger(req, k, id, mode, hopCount)
-        }
+//        if(!found) {
+//          // If nothing found, return the Node itself
+//          self ! closestFinger(req, k, id, mode, hopCount)
+//        }
 
-      case closestFinger(req, k, id, mode, hopCount)=>
+      case find_Successor(req, k, id, mode, hopCount)=>
         // Check if the Node id falls between the node id and it's successor's id
-        if (existsInRange(identifier, fingers(0).id, id)) {
-          // Return the Correct Finger
-          req ! returnSuccessor(k, fingers(0), mode, hopCount)
-        } else {
-          val newHopCount = hopCount + 1
-          // Go Through it's finger Table Now
-          self ! getClosestFinger(req, k, id, mode, newHopCount)
+        // Check if the id is equal to identifier, then send back
+        if(id == identifier){
+          req ! returnSuccessor(k, selfF , mode, hopCount)
+        }else {
+          if (existsInRange(identifier, fingers(0).id, id)) {
+            // Return the Correct Finger
+            req ! returnSuccessor(k, fingers(0), mode, hopCount)
+          } else {
+            val newHopCount = hopCount + 1
+            // Go Through it's finger Table Now
+            self ! getClosestFinger(req, k, id, mode, newHopCount)
+          }
         }
-
 
         
       case returnSuccessor(k, finger, mode, hopCount) =>
         mode match {
-          // Incase it's a key
+          // InCase it's a key
           case 0 =>
             // Get the Actor Reference
-            val result = keys.get(k)
-
-            result match {
-              case None     => 
-              case Some(x)  =>
-                reqProcessed+=1
+//            val result = keys.get(k)
+//
+//            result match {
+//              case None     =>
+//              case Some(x)  =>
                 hops += hopCount
+                reqProcessed+=1
                 // If the Requested Keys are matched
                 if (reqProcessed == maxRequests){
-                  // Cancel the Scheduler
                   requests.cancel()
                   // Send a Message to the Listener
                   val avg = hops/maxRequests
                   // How to get the Listener
                   listener ! done(avg)
                 }
-            }
+//            }
 
           case 3 =>
             // Get the Actor Reference
-            val result = keys.get(k)
+//            val result = keys.get(k)
 
-            result match {
-              case None     =>
-              case Some(x)  =>
-                // Send a Message to the Actor
-                x ! Successor(finger)
-            }
+//            result match {
+//              case None     =>
+//              case Some(x)  =>
+//                // Send a Message to the Actor
+//                x ! Successor(finger)
+            self ! Successor(finger)
+//            }
 
           // InCase it's a finger
           case 1 =>
@@ -185,20 +209,26 @@ object project3 {
 
         import context.dispatcher
 
-        stabilizeC  = context.system.scheduler.schedule(0 milliseconds, heartBeat, self, stabilize)
-//        val tmp2 = context.system.scheduler.schedule(3 milliseconds, 1 second, self, printStatus)
-        fixFingersC = context.system.scheduler.schedule(1 seconds, heartBeat, self, fix_fingers)
-        requests    =context.system.scheduler.schedule(5 seconds, 1 seconds, self, findKey)
+        stabilizeC  = context.system.scheduler.schedule(0 seconds, heartBeat, self, stabilize)
+        context.system.scheduler.schedule(15 seconds, 1 seconds, self, printStatus)
+        fixFingersC = context.system.scheduler.schedule(5 seconds, 5 * heartBeat, self, fix_fingers)
+        requests    = context.system.scheduler.schedule(20 seconds, 1 seconds, self, findKey)
 
       case `printStatus` =>
-        println("ID : " + identifier + " Suc : " + fingers(0).id)
+        printC-=1
+        if(printC == 0) {
+          println("ID : " + identifier + " Suc : " + fingers(0).id + " Pred : " + predecessor.id)
+        }
 
       case getSuccessor(id)   =>
         // Return the Successor to the Requesting ID
-        val hopCount = 1
-        key+=1
-        keys.put(key,sender())
-        self ! getClosestFinger(self, key, id, 3, hopCount)
+        val hopCount = 0
+//        key+=1
+//        keys.put(key,sender())
+        // This is Wrong Logic
+//        self ! getClosestFinger(sender(), 0, id, 3, hopCount)
+        // Send it to the Closest Finger
+        self ! find_Successor(sender(), 0, id, 3, hopCount)
 
       case `stabilize` =>
         if(sCounter == 0) {
@@ -207,6 +237,7 @@ object project3 {
           }
         }
         // If it's successor is set
+//        self ! getSuccessor(identifier)
         fingers(0).node ! returnPredecessor
         sCounter-=1
 
@@ -223,16 +254,14 @@ object project3 {
         val hopCount = 0
         // If it is the First Time, instantiate the finger
         if(fingers(fIndex) == null){
-          fingers(fIndex)       = new finger
+          fingers(fIndex)  = new finger
         }
+        self ! find_Successor(self, fIndex, start, 1, hopCount)
 
-        fingers(fIndex).id = start
-
-        self ! getClosestFinger(self, fIndex, start, 1, hopCount)
         fCounter-=1
 
       case inform(id) =>
-        if(predecessor == null){
+        if(predecessor.node == null){
           predecessor.id   = id
           predecessor.node = sender()
         }else{
@@ -265,15 +294,15 @@ object project3 {
   }
 
   // The Listener Actor
-  class Listener(totalNodes : Int) extends Actor {
+  class Listener extends Actor {
     var total = 0.0
     var counter = 0
     def receive = {
       case done(avg) ⇒
         total += avg
         counter+=1
-        println(counter)
-        if(counter == totalNodes){
+//        println(counter)
+        if(counter == numNodes - 1){
           val avg = total/counter
           println("Average Hops : " + avg)
           context.system.shutdown()
@@ -285,10 +314,10 @@ object project3 {
   def existsInRange(s:Int, end:Int, id:Int) : Boolean = {
     val start = s + 1
     if(start < end) {
-      if (id <= end && id >= start) {
+      if (id <= end && id >=start) {
         return true
       }
-    }else{
+    }else if(start > end){
       if((id >= start && id <= max) || (id >= 0 && id <= end)){
         return true
       }
@@ -308,41 +337,68 @@ object project3 {
     val system = ActorSystem("Chord")
 
     // Create the result listener, which will print the result and shutdown the system
-    val listener = system.actorOf(Props(new Listener(numNodes)), name = "listener")
+    val listener = system.actorOf(Props[Listener], name = "listener")
 
     // Create and Instantiate the BootStrap Node
     val random = new Random()
-    val m = 31
+
+    // Set m
+    m = 31
+
+    // Set the Max
+    max = Math.pow(2,m).toInt - 1
 
     // BootStrap Node initialization
-    val txt = random.nextString(10)
+    val length  = random.nextInt(100)
+    val txt = random.nextString(length)
     val id = returnKey(txt)
-    val bootStrap = system.actorOf(Props(new Node(id, m, listener)),"bootstrap")
+    val bootStrap = system.actorOf(Props(new Node(id, listener)),"bootstrap")
     val finger = new finger
     finger.id = id
     finger.node = bootStrap
+    println(id)
+    set.add(id)
+
+    // We nee a List of BootStrap Nodes
+    // Say 1/20 of the Peers
+    // Think about how you can do it???
 
     // Make it the Successor and Predecessor
     bootStrap ! Successor(finger)
+    bootStrap ! Predecessor(finger)
 
-    for(i <- 1 until numNodes){
+    val counter = numNodes
+
+    for(i <- 1 until counter){
       // Create an Actor Node
       val name = "Node" + i
-      val txt = random.nextString(10)
-      val id = returnKey(txt)
-      val newNode = system.actorOf(Props(new Node(id, m, listener)), name)
+      var length  = random.nextInt(100)
+      var txt = random.nextString(length)
+      var id = returnKey(txt)
+      while(set.contains(id)) {
+        length  = random.nextInt(100000)
+        txt = random.nextString(length)
+        id = returnKey(txt + length)
+      }
+      set.add(id)
+//      println(id)
+      val newNode = system.actorOf(Props(new Node(id, listener)), name)
       newNode ! join(bootStrap)
     }
   }
 
   def returnKey(input : String) : Int = {
-    val m = MessageDigest.getInstance("SHA-1").digest(input.getBytes("UTF-8"))
-    val l =  m.length - 1
+    val bytes = (m + 1) / 8
+    val hash = MessageDigest.getInstance("SHA-1").digest(input.getBytes("UTF-8"))
     var key = 0
-    for(i <- 0 until 4){
-      key = key | m(i)<<(i*8)
-    }
-
+    val random = new Random()
+//    while (bytes != 0) {
+        for(i <- 0 until bytes){
+//      val i =
+          key = key | hash(i) << (i * 8)
+//      bytes-=1
+        }
+//    }
     val res = key & 0x7FFFFFFF
     res
   }
